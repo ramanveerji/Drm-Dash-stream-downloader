@@ -47,22 +47,31 @@ Descriptor.write = write
 
 def durationtoseconds(period):
     #Duration format in PTxDxHxMxS
-    if(period[:2] == "PT"):
-        period = period[2:]   
+    if (period[:2] == "PT"):
+        period = period[2:]
         day = int(period.split("D")[0] if 'D' in period else 0)
         hour = int(period.split("H")[0].split("D")[-1]  if 'H' in period else 0)
         minute = int(period.split("M")[0].split("H")[-1] if 'M' in period else 0)
         second = period.split("S")[0].split("M")[-1]
-        print("Total time: " + str(day) + " days " + str(hour) + " hours " + str(minute) + " minutes and " + str(second) + " seconds")
-        total_time = float(str((day * 24 * 60 * 60) + (hour * 60 * 60) + (minute * 60) + (int(second.split('.')[0]))) + '.' + str(int(second.split('.')[-1])))
-        return total_time
-
+        print(
+            f"Total time: {day} days {hour} hours {minute} minutes and {str(second)} seconds"
+        )
+        return float(
+            str(
+                (day * 24 * 60 * 60)
+                + (hour * 60 * 60)
+                + (minute * 60)
+                + (int(second.split('.')[0]))
+            )
+            + '.'
+            + str(int(second.split('.')[-1]))
+        )
     else:
         print("Duration Format Error")
         return None
 
 def download_media(filename,url,epoch = 0):
-    if(os.path.isfile(filename)):
+    if (os.path.isfile(filename)):
         media_head = requests.head(url, allow_redirects = True)
         if media_head.status_code == 200:
             media_length = int(media_head.headers.get("content-length"))
@@ -91,9 +100,7 @@ def download_media(filename,url,epoch = 0):
                     print("Connection error: Reattempting download of video..")
                     download_media(filename,url, epoch + 1)
 
-            if os.path.getsize(filename) >= video_length:
-                pass
-            else:
+            if os.path.getsize(filename) < video_length:
                 print("Error downloaded video is faulty.. Retrying to download")
                 download_media(filename,url, epoch + 1)
         elif(media.status_code == 404):
@@ -106,9 +113,9 @@ def download_media(filename,url,epoch = 0):
             download_media(filename,url, epoch + 1)
 
 def cleanup(path):
-    leftover_files = glob.glob(path + '/*.mp4', recursive=True)
-    mpd_files = glob.glob(path + '/*.mpd', recursive=True)
-    leftover_files = leftover_files + mpd_files
+    leftover_files = glob.glob(f'{path}/*.mp4', recursive=True)
+    mpd_files = glob.glob(f'{path}/*.mpd', recursive=True)
+    leftover_files += mpd_files
     for file_list in leftover_files:
         try:
             os.remove(file_list)
@@ -171,11 +178,11 @@ def manifest_parser(mpd_url):
     running_time = durationtoseconds(mpd.media_presentation_duration)
     for period in mpd.periods:
         for adapt_set in period.adaptation_sets:
-            print("Processing " + adapt_set.mime_type)
+            print(f"Processing {adapt_set.mime_type}")
             content_type = adapt_set.mime_type
             repr = adapt_set.representations[-1] # Max Quality
             for segment in repr.segment_templates:
-                if(segment.duration):
+                if segment.duration:
                     print("Media segments are of equal timeframe")
                     segment_time = segment.duration / segment.timescale
                     total_segments = running_time / segment_time
@@ -184,16 +191,12 @@ def manifest_parser(mpd_url):
                     print(segment.media)
                     approx_no_segments = int(running_time // 10) # aproximate of 10 sec per segment
                     print("Expected No of segments:",approx_no_segments)
-                    if(content_type == "audio/mp4"):
+                    if content_type == "audio/mp4":
                         segment_extension = segment.media.split(".")[-1]
-                        audio.append(approx_no_segments)
-                        audio.append(segment.media)
-                        audio.append(segment_extension)
-                    elif(content_type == "video/mp4"):
+                        audio.extend((approx_no_segments, segment.media, segment_extension))
+                    elif content_type == "video/mp4":
                         segment_extension = segment.media.split(".")[-1]
-                        video.append(approx_no_segments)
-                        video.append(segment.media)
-                        video.append(segment_extension)
+                        video.extend((approx_no_segments, segment.media, segment_extension))
             for prot in repr.content_protections:
                 if(prot.value == "cenc"):
                     kId = prot.key_id.replace('-','')
