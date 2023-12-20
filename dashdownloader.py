@@ -12,7 +12,7 @@ quality = 1080 #default to 1080p
 retry = 3
 download_dir = os.getcwd() # set the folder to output
 working_dir = os.getcwd() # set the folder to download ephemeral files
-keyfile_path = working_dir + "/keyfile.json"
+keyfile_path = f"{working_dir}/keyfile.json"
 
 #Patching the Mpegdash lib for keyID
 def __init__(self):
@@ -26,7 +26,7 @@ def parse(self, xmlnode):
     self.value = parse_attr_value(xmlnode, 'value', str)
     self.id = parse_attr_value(xmlnode, 'id', str)
     self.key_id = parse_attr_value(xmlnode, 'ns2:default_KID', str)
-    if(self.key_id == None):
+    if self.key_id is None:
         self.key_id = parse_attr_value(xmlnode, 'cenc:default_KID', str)
 
 def write(self, xmlnode):
@@ -34,7 +34,7 @@ def write(self, xmlnode):
     write_attr_value(xmlnode, 'value', self.value)
     write_attr_value(xmlnode, 'id', self.id)
     write_attr_value(xmlnode, 'ns2:default_KID', self.key_id)
-    if(self.key_id == None):
+    if self.key_id is None:
         write_attr_value(xmlnode, 'cenc:default_KID', self.key_id)
 
 Descriptor.__init__ = __init__
@@ -91,9 +91,7 @@ def download(url,filename,count = 0):
                 else:
                     exit("Error Writing Video to Disk. Exiting...")
 
-        if os.path.getsize(filename) >= video_length:
-            pass
-        else:
+        if os.path.getsize(filename) < video_length:
             print("Error downloaded video is faulty.. Retrying to download")
             if(count <= retry):
                 count += 1
@@ -102,13 +100,13 @@ def download(url,filename,count = 0):
                 exit("Error Writing Video to Disk. Exiting...")
     else:
         print("Video file is not accessible",filename,"Retrying...")
-        if(count <= retry):
+        if (count <= retry):
             count += 1
             download(url,filename,count)
         else:
             print("Adding Video file not accessible to log")
             with open(download_dir + "\video_access_error.txt",'a') as videoaccerr:
-                videoaccerr.write(filename + " " + url +"\n")
+                videoaccerr.write(f"{filename} {url}" + "\n")
 
 def decrypt(filename,keyid,video_title):
     try:
@@ -125,9 +123,9 @@ def mux_process(outfile):
     os.system(command)
 
 def cleanup(path):
-    leftover_files = glob.glob(path + '/*.mp4', recursive=True)
-    mpd_files = glob.glob(path + '/*.mpd', recursive=True)
-    leftover_files = leftover_files + mpd_files
+    leftover_files = glob.glob(f'{path}/*.mp4', recursive=True)
+    mpd_files = glob.glob(f'{path}/*.mpd', recursive=True)
+    leftover_files += mpd_files
     for file_list in leftover_files:
         try:
             os.remove(file_list)
@@ -150,7 +148,7 @@ if __name__ == "__main__":
     download(audio_url,audio_filename)
     decrypt(video_filename,video_keyid,video_title)
     decrypt(audio_filename,audio_keyid,audio_title)
-    final_file = download_dir + '/' + video_title
+    final_file = f'{download_dir}/{video_title}'
     print(final_file)
     mux_process(final_file)
     cleanup(working_dir)
